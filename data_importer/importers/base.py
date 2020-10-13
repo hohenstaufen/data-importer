@@ -7,8 +7,7 @@ import io
 import six
 import codecs
 from django.db import transaction
-from django.db.models.fields import FieldDoesNotExist
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, FieldDoesNotExist
 from data_importer.core.descriptor import ReadDescriptor
 from data_importer.core.exceptions import StopImporter
 from data_importer.core.base import objclass2dict
@@ -64,7 +63,8 @@ class BaseImporter(object):
             return bytestr
 
         try:
-            decoded = bytestr.decode(DATA_IMPORTER_EXCEL_DECODER)  # default by excel csv
+            # default by excel csv
+            decoded = bytestr.decode(DATA_IMPORTER_EXCEL_DECODER)
         except (UnicodeEncodeError, AttributeError):
             decoded = force_text(bytestr, DATA_IMPORTER_DECODER)
 
@@ -81,7 +81,7 @@ class BaseImporter(object):
         if isinstance(source, io.IOBase):
             self._source = source
         elif isinstance(source, six.string_types) and os.path.exists(source) and source.endswith('csv'):
-            if sys.version_info >= (3,0):
+            if sys.version_info >= (3, 0):
                 self._source = codecs.open(source, 'rb', encoding=encoding)
             else:
                 self._source = codecs.open(source, 'rb')
@@ -110,7 +110,8 @@ class BaseImporter(object):
         will use model fields to populate content without id
         """
         if self.Meta.model and not hasattr(self, 'fields'):
-            all_models_fields = [i.name for i in self.Meta.model._meta.fields if i.name != 'id']
+            all_models_fields = [
+                i.name for i in self.Meta.model._meta.fields if i.name != 'id']
             self.fields = all_models_fields
 
         self.exclude_fields()
@@ -126,7 +127,8 @@ class BaseImporter(object):
         if hasattr(self, 'fields') and isinstance(self.fields, dict):
             order_dict = OrderedDict(self.fields)
             self.fields = list(self.fields)
-            self._reduce_list = list(map(convert_alphabet_to_number, order_dict.values()))
+            self._reduce_list = list(
+                map(convert_alphabet_to_number, order_dict.values()))
 
         if self.Meta.exclude and not self._excluded:
             self._excluded = True
@@ -139,7 +141,8 @@ class BaseImporter(object):
         """
         Set fields from descriptor file
         """
-        descriptor = ReadDescriptor(self.Meta.descriptor, self.Meta.descriptor_model)
+        descriptor = ReadDescriptor(
+            self.Meta.descriptor, self.Meta.descriptor_model)
         self.fields = descriptor.get_fields()
         self.exclude_fields()
 
@@ -280,12 +283,14 @@ class BaseImporter(object):
         try:
             self.pre_clean()
         except Exception as e:
-            self._error.append(self.get_error_message(e, error_type='__pre_clean__'))
+            self._error.append(self.get_error_message(
+                e, error_type='__pre_clean__'))
 
         try:
             self.clean()
         except Exception as e:
-            self._error.append(self.get_error_message(e, error_type='__clean_all__'))
+            self._error.append(self.get_error_message(
+                e, error_type='__clean_all__'))
 
         # create clean content
         for data in self._read_file():
@@ -295,7 +300,8 @@ class BaseImporter(object):
         try:
             self.post_clean()
         except Exception as e:
-            self._error.append(self.get_error_message(e, error_type='__post_clean__'))
+            self._error.append(self.get_error_message(
+                e, error_type='__post_clean__'))
 
         return self._cleaned_data
 
@@ -370,13 +376,15 @@ class BaseImporter(object):
                 try:
                     self.pre_commit()
                 except Exception as e:
-                    self._error.append(self.get_error_message(e, error_type='__pre_commit__'))
+                    self._error.append(self.get_error_message(
+                        e, error_type='__pre_commit__'))
                     transaction.rollback()
 
                 try:
                     transaction.commit()
                 except Exception as e:
-                    self._error.append(self.get_error_message(e, error_type='__trasaction__'))
+                    self._error.append(self.get_error_message(
+                        e, error_type='__trasaction__'))
                     transaction.rollback()
 
         else:
